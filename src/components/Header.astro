@@ -6,7 +6,7 @@
 <header class="header">
   <div class="container">
     <nav class="nav">
-      <a href="/" class="logo">МойБлог</a>
+      <a href="/" class="logo">RUS-NEWS</a>
       
       <button class="mobile-menu-btn" aria-label="Открыть меню">
         <span></span>
@@ -16,7 +16,7 @@
       
       <div class="nav-menu">
         <div class="categories">
-          <a href="/" class="page-link">Главная</a>
+          <!-- <a href="/" class="page-link">Главная</a> -->
           <a href="/category/политика" class="category-link">Политика</a>
           <a href="/category/в-мире" class="category-link">В мире</a>
           <a href="/category/экономика" class="category-link">Экономика</a>
@@ -27,15 +27,14 @@
           <a href="/category/наука" class="category-link">Наука</a>
           <a href="/category/армия" class="category-link">Армия</a>
           <a href="/category/спорт" class="category-link">Спорт</a>
-          <a href="/about" class="page-link">О сайте</a>
-          <a href="/contact" class="page-link">Контакты</a>
-        </div>
-        
-        <div class="search-box">
-          <input type="text" placeholder="Поиск статей..." class="search-input" id="search-input" />
-          <button class="search-btn" id="search-btn">🔍</button>
+          <!-- <a href="/about" class="page-link">О сайте</a> -->
+          <!-- <a href="/contact" class="page-link">Контакты</a> -->
         </div>
       </div>
+			<!-- <div class="search-box">
+          <input type="text" placeholder="Поиск статей..." class="search-input" id="search-input" />
+          <button class="search-btn" id="search-btn">🔍</button>
+        </div> -->
     </nav>
   </div>
 </header>
@@ -101,19 +100,22 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 0 1rem;
 }
 
 .nav {
+	width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
+	gap: 1rem;
   padding: 1rem 0;
 }
 
 .logo {
+	white-space: nowrap;
   font-size: 1.8rem;
   font-weight: bold;
   color: #667eea;
@@ -209,6 +211,12 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 /* Адаптивность */
+@media (max-width: 1120px) {
+	.categories {
+    gap: 0.5rem;
+  }
+}
+
 @media (max-width: 1024px) {
   .nav-menu {
     gap: 1rem;
@@ -282,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   .mobile-menu-btn.active span:nth-child(1) {
-    transform: rotate(45deg) translate(6px, 6px);
+    transform: rotate(45deg) translate(8px, 0px);
   }
   
   .mobile-menu-btn.active span:nth-child(2) {
@@ -290,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   .mobile-menu-btn.active span:nth-child(3) {
-    transform: rotate(-45deg) translate(6px, -6px);
+    transform: rotate(-45deg) translate(8px, 0px);
   }
   
   /* Предотвращаем скролл тела при открытом меню */

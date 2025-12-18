@@ -13,9 +13,9 @@ body {
 }
 
 .container {
-    max-width: 1200px;
+    max-width: 100%;
+		padding: 0 5%;
     margin: 0 auto;
-    padding: 0 1rem;
 }
 
 // Главная страница
@@ -154,6 +154,14 @@ body {
 }
 
 // Адаптивность
+@media (max-width: 1400px) {
+	.container {
+			max-width: 100%;
+			padding: 0 2%;
+			margin: 0 auto;
+	}
+}
+
 @media (max-width: 768px) {
     .hero {
         padding: 2rem 1rem;

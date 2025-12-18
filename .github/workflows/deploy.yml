@@ -9,30 +9,31 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
+    - name: 🚚 Checkout code
       uses: actions/checkout@v4
     
-    - name: Setup Node.js
+    - name: ⚙️ Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
     
-    - name: Install dependencies
+    - name: 📦 Install dependencies
       run: npm ci
     
-    - name: Build project
+    - name: 🔨 Build project
       run: npm run build
     
-    - name: Verify build output
+    - name: ✅ Verify build
       run: |
-        if [ ! -d "dist" ]; then
-          echo "❌ Build failed: dist folder not found"
+        if [ ! -f "dist/index.html" ]; then
+          echo "❌ ERROR: index.html not found in dist/"
+          ls -la dist/
           exit 1
         fi
-        echo "✅ Build successful"
+        echo "✅ Build verified"
     
-    - name: Deploy to REG.RU
+    - name: 🚀 Deploy to REG.RU
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -40,6 +41,9 @@ jobs:
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./dist/
         server-dir: /www/rus-news.online/
-        
-    - name: Deployment success
-      run: echo "🎉 Site deployed successfully!"
+        # Добавьте эти параметры если FTP не работает:
+        # port: 990
+        # protocol: ftps
+    
+    - name: 🎉 Success
+      run: echo "Site deployed to rus-news.online"

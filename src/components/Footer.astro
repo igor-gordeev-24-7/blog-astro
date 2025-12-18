@@ -1,10 +1,19 @@
+---
+const startYear = 2025; // Год создания сайта
+const currentYear = new Date().getFullYear();
+const yearDisplay = startYear === currentYear ? 
+    `${currentYear}` : 
+    `${startYear}–${currentYear}`;
+---
+
 <footer class="footer">
     <div class="container">
-        <p>© 2024 Мой блог. Все права защищены.</p>
+        <p>© {yearDisplay} RUS-NEWS. Все права защищены.</p>
         <nav>
             <a href="/about">О сайте</a>
-            <a href="/contact">Контакты</a>
-            <a href="/privacy">Конфиденциальность</a>
+            <!-- <a href="/contact">Контакты</a> -->
+            <!-- <a href="/privacy">Конфиденциальность</a> -->
+
         </nav>
     </div>
 </footer>

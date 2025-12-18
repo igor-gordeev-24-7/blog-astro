@@ -1,0 +1,29 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+    title="Контакты | Мой блог" 
+    description="Свяжитесь с нами для сотрудничества"
+>
+    <div class="page-content">
+        <h1>Контакты</h1>
+        <p>Мы всегда рады вашим вопросам и предложениям. Свяжитесь с нами удобным для вас способом.</p>
+        
+        <div class="contact-info">
+            <h2>Контактная информация</h2>
+            <p><strong>Email:</strong> info@myblog.com</p>
+            <p><strong>Телефон:</strong> +7 (999) 123-45-67</p>
+            <p><strong>Адрес:</strong> г. Москва, ул. Примерная, д. 1</p>
+        </div>
+        
+        <form class="contact-form">
+            <h2>Написать нам</h2>
+            <input type="text" placeholder="Ваше имя" required />
+            <input type="email" placeholder="Ваш email" required />
+            <input type="text" placeholder="Тема сообщения" required />
+            <textarea placeholder="Ваше сообщение" required></textarea>
+            <button type="submit">Отправить сообщение</button>
+        </form>
+    </div>
+</Layout>

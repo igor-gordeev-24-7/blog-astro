@@ -1,0 +1,99 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+  title="Страница не найдена | Мой блог" 
+  description="Запрошенная страница не существует или была перемещена"
+>
+  <div class="container">
+    <div class="not-found">
+      <div class="not-found-content">
+        <h1>404</h1>
+        <h2>Страница не найдена</h2>
+        <p>Извините, запрошенная страница не существует или была перемещена.</p>
+        <div class="not-found-actions">
+          <a href="/" class="btn btn-primary">На главную</a>
+          <a href="/about" class="btn btn-secondary">О сайте</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+.not-found {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 70vh;
+  text-align: center;
+  padding: 2rem;
+}
+
+.not-found-content h1 {
+  font-size: 6rem;
+  margin: 0;
+  color: #667eea;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.not-found-content h2 {
+  font-size: 2rem;
+  margin: 1rem 0;
+  color: #333;
+}
+
+.not-found-content p {
+  color: #666;
+  font-size: 1.1rem;
+  max-width: 500px;
+  margin: 0 auto 2rem;
+}
+
+.not-found-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+  background: #f8f9fa;
+  color: #555;
+  border: 1px solid #ddd;
+}
+
+.btn-secondary:hover {
+  background: #e9ecef;
+}
+
+@media (max-width: 768px) {
+  .not-found-content h1 {
+    font-size: 4rem;
+  }
+  
+  .not-found-content h2 {
+    font-size: 1.5rem;
+  }
+}
+</style>

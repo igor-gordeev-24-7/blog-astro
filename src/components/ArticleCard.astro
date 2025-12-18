@@ -1,0 +1,203 @@
+---
+import { categoryToSlug } from '../utils/articles-simple';
+
+interface Props {
+  article: any;
+}
+
+const { article } = Astro.props;
+
+// Безопасное получение данных
+const title = article?.frontmatter?.title || 'Без названия';
+const description = article?.frontmatter?.description || 'Нет описания';
+const category = article?.frontmatter?.category || 'Без категории';
+const date = article?.frontmatter?.date ? new Date(article.frontmatter.date) : new Date();
+const slug = article?.slug || 'unknown';
+const image = article?.frontmatter?.image;
+
+// Создаем slug для категории
+const categorySlug = categoryToSlug(category);
+---
+
+<article class="article-card">
+  {image && (
+    <div class="article-image">
+      <a href={`/blog/${slug}`}>
+        <img 
+          src={image} 
+          alt={title}
+          loading="lazy"
+        />
+      </a>
+    </div>
+  )}
+  
+  <div class="article-content">
+    <div class="article-meta">
+      <time datetime={date.toISOString()}>
+        {date.toLocaleDateString('ru-RU', {
+          day: 'numeric',
+          month: 'short'
+        })}
+      </time>
+      <a href={`/category/${categorySlug}`} class="article-category">
+        {category}
+      </a>
+    </div>
+    
+    <h2 class="article-title">
+      <a href={`/blog/${slug}`}>{title}</a>
+    </h2>
+    
+    <p class="article-excerpt">{description}</p>
+    
+    <div class="article-footer">
+      <a href={`/blog/${slug}`} class="read-more">
+        Читать далее
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 0L6.59 1.41L12.17 7H0V9H12.17L6.59 14.59L8 16L16 8L8 0Z" fill="currentColor"/>
+        </svg>
+      </a>
+    </div>
+  </div>
+</article>
+
+<style>
+.article-card {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+  border: 1px solid #eee;
+}
+
+.article-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+}
+
+.article-image {
+  flex-shrink: 0;
+  width: 200px;
+  height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.article-image a {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.article-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.article-card:hover .article-image img {
+  transform: scale(1.05);
+}
+
+.article-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.article-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.article-category {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: opacity 0.3s;
+}
+
+.article-category:hover {
+  opacity: 0.9;
+}
+
+.article-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.3rem;
+  line-height: 1.4;
+}
+
+.article-title a {
+  color: #333;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.article-title a:hover {
+  color: #667eea;
+}
+
+.article-excerpt {
+  flex: 1;
+  margin: 0 0 1rem 0;
+  color: #666;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.article-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+}
+
+.read-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: gap 0.3s;
+}
+
+.read-more:hover {
+  gap: 0.75rem;
+}
+
+.read-more svg {
+  transition: transform 0.3s;
+}
+
+.read-more:hover svg {
+  transform: translateX(3px);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .article-card {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .article-image {
+    width: 100%;
+    height: 200px;
+  }
+}
+</style>

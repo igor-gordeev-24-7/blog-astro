@@ -1,0 +1,118 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ArticleCard from '../components/ArticleCard.astro';
+import { getLatestArticlesSimple } from '../utils/articles-simple';
+
+const latestArticles = await getLatestArticlesSimple(6);
+---
+
+<Layout 
+  title="Главная | Мой блог" 
+  description="Последние новости и статьи на различные темы"
+>
+  <section class="hero">
+    <div class="container">
+      <h1>Последние новости</h1>
+      <p>Самые свежие статьи и события дня. Все самое интересное в одном месте.</p>
+    </div>
+  </section>
+
+  <div class="container">
+    <section class="latest-articles">
+      <h2>Последние публикации ({latestArticles.length})</h2>
+      
+      {latestArticles.length > 0 ? (
+        <div class="articles-list">
+          {latestArticles.map((article) => (
+            <ArticleCard article={article} />
+          ))}
+        </div>
+      ) : (
+        <div class="no-articles">
+          <h3>Статьи не найдены</h3>
+          <p>Проверьте:</p>
+          <ul>
+            <li>Файлы в папке <code>src/content/blog/</code></li>
+            <li>Правильность формата frontmatter в .md файлах</li>
+            <li>Консоль браузера (F12) для ошибок</li>
+          </ul>
+        </div>
+      )}
+    </section>
+  </div>
+</Layout>
+
+<style>
+.hero {
+  text-align: center;
+  padding: 4rem 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  margin-bottom: 3rem;
+}
+
+.hero h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.hero p {
+  font-size: 1.2rem;
+  opacity: 0.9;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.latest-articles {
+  margin: 3rem 0;
+}
+
+.latest-articles h2 {
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  color: #333;
+}
+
+.articles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.no-articles {
+  text-align: center;
+  padding: 3rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 2px dashed #ddd;
+}
+
+.no-articles h3 {
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+.no-articles ul {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+  text-align: left;
+  display: inline-block;
+}
+
+.no-articles li {
+  margin: 0.5rem 0;
+  color: #555;
+}
+
+code {
+  background: #f0f0f0;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-family: monospace;
+}
+</style>

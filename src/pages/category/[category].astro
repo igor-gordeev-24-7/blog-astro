@@ -1,0 +1,435 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import ArticleCard from '../../components/ArticleCard.astro';
+import { 
+  getArticlesByCategorySimple, 
+  getArticles, 
+  categoryToSlug,
+  slugToCategory,
+  getPredefinedCategories,
+  isPredefinedCategory 
+} from '../../utils/articles-simple';
+
+export async function getStaticPaths() {
+  const articles = await getArticles();
+  const predefinedCategories = getPredefinedCategories();
+  
+  // Получаем все уникальные категории из статей
+  const articleCategories = [...new Set(articles.map(a => a.frontmatter.category).filter(Boolean))];
+  
+  // Объединяем категории из статей и предопределенные категории
+  const allCategories = [...new Set([...articleCategories, ...predefinedCategories])];
+  
+  return allCategories.map((category) => ({
+    params: {
+      category: categoryToSlug(category),
+    },
+  }));
+}
+
+const { category = '' } = Astro.params;
+
+// Преобразуем slug обратно в читаемое название
+const categoryName = slugToCategory(category);
+const articles = await getArticlesByCategorySimple(category);
+const allArticles = await getArticles();
+const allCategories = [...new Set(allArticles.map(a => a.frontmatter.category).filter(Boolean))];
+const predefinedCategories = getPredefinedCategories();
+
+// Определяем, является ли категория предопределенной
+const isPredefined = isPredefinedCategory(category);
+
+// Если категория пустая ИЛИ это не предопределенная категория И нет статей, тогда 404
+if (!category || (!isPredefined && articles.length === 0)) {
+  console.log(`Redirecting to 404: category="${category}", isPredefined=${isPredefined}, articles=${articles.length}`);
+  return Astro.redirect('/404');
+}
+
+console.log(`Category: ${categoryName}, Articles: ${articles.length}, Is predefined: ${isPredefined}`);
+---
+
+<Layout 
+  title={`${categoryName} - Новости и статьи | Мой блог`}
+  description={`Последние новости и статьи на тему ${categoryName}. Все самое интересное и актуальное в одной категории.`}
+>
+  <div class="container">
+    <div class="category-header">
+      <h1 class="category-title">{categoryName}</h1>
+      <p class="category-description">
+        Последние новости и статьи на тему {categoryName}. Все самое интересное и актуальное в одной категории.
+      </p>
+      <div class="category-count">
+        <span class="count-number">{articles.length}</span> {articles.length === 1 ? 'статья' : articles.length < 5 ? 'статьи' : 'статей'}
+      </div>
+    </div>
+
+    {articles.length > 0 ? (
+      <div class="category-articles">
+        <div class="articles-grid">
+          {articles.map((article) => (
+            <ArticleCard article={article} />
+          ))}
+        </div>
+      </div>
+    ) : (
+      <div class="no-articles">
+        <div class="no-articles-content">
+          <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <h2>Пока нет статей в категории "{categoryName}"</h2>
+            <p>Эта категория еще пуста, но мы активно работаем над новыми материалами. Скоро здесь появятся интересные статьи!</p>
+            
+            <div class="suggestions">
+              <h3>А пока посмотрите:</h3>
+              <div class="suggestion-cards">
+                <a href="/" class="suggestion-card">
+                  <span class="suggestion-icon">🏠</span>
+                  <div class="suggestion-content">
+                    <h4>Главная страница</h4>
+                    <p>Все последние статьи</p>
+                  </div>
+                </a>
+                
+                <a href="/about" class="suggestion-card">
+                  <span class="suggestion-icon">ℹ️</span>
+                  <div class="suggestion-content">
+                    <h4>О сайте</h4>
+                    <p>Узнайте больше о нашем блоге</p>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          <div class="other-categories-section">
+            <h3>Другие категории с статьями:</h3>
+            <div class="other-categories">
+              {allCategories.filter(cat => {
+                const catSlug = categoryToSlug(cat);
+                return catSlug !== category;
+              }).map(cat => {
+                const catSlug = categoryToSlug(cat);
+                return (
+                  <a href={`/category/${catSlug}`} class="category-link">
+                    {cat}
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    <aside class="all-categories">
+      <h2>Все категории</h2>
+      <div class="categories-list">
+        {[...new Set([...allCategories, ...predefinedCategories])].map(cat => {
+          const catSlug = categoryToSlug(cat);
+          const isActive = catSlug === category;
+          const hasArticles = allCategories.includes(cat);
+          
+          return (
+            <a 
+              href={`/category/${catSlug}`} 
+              class={`category-item ${isActive ? 'active' : ''} ${!hasArticles ? 'empty-category' : ''}`}
+              title={!hasArticles ? 'Пока нет статей' : ''}
+            >
+              <span class="category-icon">
+                {cat === 'Политика' && '📰'}
+                {cat === 'В мире' && '🌍'}
+                {cat === 'Экономика' && '💰'}
+                {cat === 'Общество' && '👥'}
+                {cat === 'Происшествия' && '🚨'}
+                {cat === 'Культура' && '🎨'}
+                {cat === 'Туризм' && '✈️'}
+                {cat === 'Наука' && '🔬'}
+                {cat === 'Армия' && '⚔️'}
+                {cat === 'Спорт' && '⚽'}
+                {!['Политика', 'В мире', 'Экономика', 'Общество', 'Происшествия', 
+                   'Культура', 'Туризм', 'Наука', 'Армия', 'Спорт'].includes(cat) && '📄'}
+              </span>
+              <span class="category-text">{cat}</span>
+              {!hasArticles && <span class="empty-badge">пусто</span>}
+            </a>
+          );
+        })}
+      </div>
+    </aside>
+  </div>
+</Layout>
+
+<style>
+/* Стили остаются без изменений */
+.category-header {
+  text-align: center;
+  padding: 3rem 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px;
+  margin-bottom: 3rem;
+}
+
+.category-title {
+  font-size: 2.5rem;
+  margin: 0 0 1rem 0;
+}
+
+.category-description {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  max-width: 600px;
+  margin: 0 auto 1.5rem;
+}
+
+.category-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1.5rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.count-number {
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.articles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 2rem;
+  margin: 2rem 0;
+}
+
+.no-articles {
+  padding: 4rem 2rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin: 2rem 0;
+  border: 2px dashed #ddd;
+}
+
+.empty-state {
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  opacity: 0.5;
+}
+
+.empty-state h2 {
+  color: #555;
+  margin-bottom: 1rem;
+  font-size: 1.8rem;
+}
+
+.empty-state p {
+  color: #777;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.suggestions {
+  margin: 3rem 0;
+  padding-top: 2rem;
+  border-top: 1px solid #eee;
+}
+
+.suggestions h3 {
+  color: #555;
+  margin-bottom: 1.5rem;
+  font-size: 1.3rem;
+}
+
+.suggestion-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.suggestion-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #333;
+  border: 1px solid #e9ecef;
+  transition: all 0.3s;
+}
+
+.suggestion-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  border-color: #667eea;
+}
+
+.suggestion-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.suggestion-content h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.suggestion-content p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.other-categories-section {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid #eee;
+}
+
+.other-categories-section h3 {
+  color: #555;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-size: 1.3rem;
+}
+
+.other-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.category-link {
+  background: #667eea;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.category-link:hover {
+  background: #5a67d8;
+  transform: translateY(-2px);
+}
+
+.all-categories {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+  margin: 3rem 0;
+}
+
+.all-categories h2 {
+  margin: 0 0 1.5rem 0;
+  color: #333;
+}
+
+.categories-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.category-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #555;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.category-item:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.category-item.active {
+  background: #667eea;
+  color: white;
+}
+
+.category-item.empty-category {
+  opacity: 0.7;
+  background: #f0f0f0;
+}
+
+.category-item.empty-category:hover {
+  background: #e0e0e0;
+  color: #555;
+}
+
+.category-icon {
+  font-size: 1.2rem;
+}
+
+.category-text {
+  font-weight: 500;
+  flex: 1;
+}
+
+.empty-badge {
+  background: rgba(0,0,0,0.1);
+  color: #666;
+  padding: 0.2rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: normal;
+}
+
+.category-item.active .empty-badge {
+  background: rgba(255,255,255,0.3);
+  color: white;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .category-title {
+    font-size: 2rem;
+  }
+  
+  .articles-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .categories-list {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+  
+  .suggestion-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .empty-icon {
+    font-size: 3rem;
+  }
+  
+  .empty-state h2 {
+    font-size: 1.5rem;
+  }
+}
+</style>

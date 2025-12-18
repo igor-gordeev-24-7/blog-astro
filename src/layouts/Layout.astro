@@ -3,7 +3,6 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import '../styles/global.scss';
 
-// Получаем пропсы
 const { title, description } = Astro.props;
 ---
 
@@ -31,14 +30,28 @@ const { title, description } = Astro.props;
     <meta name="language" content="Russian">
     <link rel="canonical" href={Astro.url ? Astro.url.href : '/'}>
     
-    <!-- Favicon (добавьте свой favicon в public/) -->
+    <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="alternate icon" href="/favicon.ico">
     
-    <!-- Опционально: добавьте ссылки на шрифты если нужно -->
-    <!-- <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"> -->
+    <style>
+        /* Критические стили для правильного лейаута */
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        main {
+            flex: 1 0 auto; /* Растягивает основное содержимое */
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
     <Header />
@@ -46,5 +59,10 @@ const { title, description } = Astro.props;
         <slot />
     </main>
     <Footer />
+    
+    <style>
+        /* Дополнительные стили для компонентов */
+        /* Если нужно, добавьте сюда минимальные стили для header/footer */
+    </style>
 </body>
 </html>

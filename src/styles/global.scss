@@ -5,17 +5,49 @@
     box-sizing: border-box;
 }
 
+html, body {
+    height: 100%;
+}
+
 body {
     font-family: 'Arial', sans-serif;
     line-height: 1.6;
     color: #333;
     background: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    flex: 1 0 auto; // Основной контент растягивается
+    width: 100%;
+}
+
+// Контейнер с минимальной высотой для страниц с малым контентом
+.content-wrapper {
+    min-height: 60vh;
+    padding: 2rem 0;
 }
 
 .container {
     max-width: 100%;
-		padding: 0 5%;
+    padding: 0 5%;
     margin: 0 auto;
+    
+    // Для контейнеров, которые должны растягиваться
+    &.stretch-container {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+}
+
+// Для страниц с небольшим контентом добавьте класс
+.page-with-little-content {
+    .container {
+        min-height: calc(100vh - 300px); // Подстройте под высоту ваших header/footer
+    }
 }
 
 // Главная страница
@@ -37,6 +69,19 @@ body {
     }
 }
 
+// Обновите .latest-articles для растягивания
+.latest-articles {
+    margin: 3rem 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 400px;
+    
+    .articles-list {
+        flex: 1;
+    }
+}
+
+// Остальные ваши стили остаются без изменений...
 .articles-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -44,122 +89,11 @@ body {
     margin: 2rem 0;
 }
 
-// Страница статьи
-.article-page {
-    max-width: 800px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-    
-    .article-header {
-        margin-bottom: 2rem;
-        
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .article-meta {
-            display: flex;
-            gap: 1rem;
-            color: #666;
-            margin-bottom: 1rem;
-        }
-        
-        img {
-            width: 100%;
-            max-height: 400px;
-            object-fit: cover;
-            border-radius: 8px;
-        }
-    }
-    
-    .article-content {
-        font-size: 1.1rem;
-        line-height: 1.8;
-        
-        h2, h3 {
-            margin: 2rem 0 1rem 0;
-        }
-        
-        p {
-            margin-bottom: 1.5rem;
-        }
-        
-        img {
-            max-width: 100%;
-            height: auto;
-            margin: 1.5rem 0;
-        }
-    }
-}
-
-// О сайте и Контакты
-.page-content {
-    max-width: 800px;
-    margin: 2rem auto;
-    padding: 2rem;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    
-    h1 {
-        margin-bottom: 1.5rem;
-        color: #333;
-    }
-    
-    p {
-        margin-bottom: 1rem;
-        line-height: 1.8;
-    }
-}
-
-.contact-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin-top: 2rem;
-    
-    input, textarea {
-        padding: 0.75rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-family: inherit;
-        font-size: 1rem;
-        
-        &:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-    }
-    
-    textarea {
-        min-height: 150px;
-        resize: vertical;
-    }
-    
-    button {
-        background: #667eea;
-        color: white;
-        padding: 0.75rem;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 1rem;
-        transition: background 0.3s;
-        
-        &:hover {
-            background: #5a67d8;
-        }
-    }
-}
-
 // Адаптивность
 @media (max-width: 1400px) {
-	.container {
-			max-width: 100%;
-			padding: 0 2%;
-			margin: 0 auto;
-	}
+    .container {
+        padding: 0 2%;
+    }
 }
 
 @media (max-width: 768px) {
@@ -171,16 +105,13 @@ body {
         }
     }
     
-    .page-content {
-        margin: 1rem;
-        padding: 1rem;
+    .latest-articles {
+        min-height: 300px;
     }
-    
-    .article-page {
-        .article-header {
-            h1 {
-                font-size: 2rem;
-            }
-        }
-    }
+}
+
+// Стили для Footer (если их еще нет)
+footer {
+    flex-shrink: 0; // Футер не сжимается
+    // Добавьте ваши стили для footer
 }

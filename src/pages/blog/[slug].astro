@@ -1,7 +1,34 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import ArticleCard from '../../components/ArticleCard.astro';
-import { getArticleBySlugSimple, getLatestArticlesSimple, getArticles } from '../../utils/articles-simple';
+import { getArticles } from '../../utils/articles-simple';
+
+// Функция для получения соседних статей
+async function getNeighboringArticles(currentSlug: string) {
+  const allArticles = await getArticles();
+  
+  // Сортируем по дате (от новых к старым)
+  const sortedArticles = allArticles.slice().sort((a, b) => {
+    const dateA = new Date(a.frontmatter.date).getTime();
+    const dateB = new Date(b.frontmatter.date).getTime();
+    return dateB - dateA; // От новых к старым
+  });
+  
+  // Находим индекс текущей статьи
+  const currentIndex = sortedArticles.findIndex(article => article.slug === currentSlug);
+  
+  if (currentIndex === -1) {
+    return { previous: null, next: null };
+  }
+  
+  // Получаем соседние статьи
+  const previousArticle = currentIndex > 0 ? sortedArticles[currentIndex - 1] : null;
+  const nextArticle = currentIndex < sortedArticles.length - 1 ? sortedArticles[currentIndex + 1] : null;
+  
+  return {
+    previous: previousArticle,
+    next: nextArticle
+  };
+}
 
 export async function getStaticPaths() {
   const articles = await getArticles();
@@ -18,7 +45,10 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 const { article } = Astro.props;
-const latestArticles = await getLatestArticlesSimple(3);
+const latestArticles = (await getArticles()).slice(0, 3); // Получаем 3 последние статьи
+
+// Получаем соседние статьи
+const { previous, next } = await getNeighboringArticles(slug as string);
 
 // Если статья не найдена - редирект на 404
 if (!article) {
@@ -31,6 +61,24 @@ const { Content } = article;
 const categorySlug = article.frontmatter.category 
   ? article.frontmatter.category.toLowerCase().replace(/\s+/g, '-')
   : 'uncategorized';
+
+// Функции для форматирования дат
+function formatDate(dateInput: string | Date): string {
+  const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  return date.toLocaleDateString('ru-RU', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+function formatShortDate(dateInput: string | Date): string {
+  const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  return date.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'short'
+  });
+}
 ---
 
 <Layout 
@@ -42,12 +90,10 @@ const categorySlug = article.frontmatter.category
       <article class="article-page">
         <header class="article-header">
           <div class="article-meta">
-            <time datetime={new Date(article.frontmatter.date).toISOString()}>
-              {new Date(article.frontmatter.date).toLocaleDateString('ru-RU', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
+            <time datetime={article.frontmatter.date instanceof Date 
+              ? article.frontmatter.date.toISOString() 
+              : new Date(article.frontmatter.date).toISOString()}>
+              {formatDate(article.frontmatter.date)}
             </time>
             <a href={`/category/${categorySlug}`} class="category-link">
               {article.frontmatter.category}
@@ -82,12 +128,78 @@ const categorySlug = article.frontmatter.category
             <div class="article-tags">
               <span>Теги:</span>
               <div class="tags-list">
-                {article.frontmatter.tags.map(tag => (
+                {article.frontmatter.tags.map((tag: string) => (
                   <span class="tag">{tag}</span>
                 ))}
               </div>
             </div>
           </footer>
+        )}
+        
+        <!-- Навигация между статьями -->
+        {(previous || next) && (
+          <nav class="article-navigation">
+            <h3 class="navigation-title">Читайте также</h3>
+            <div class="navigation-cards" id="navigation-cards">
+              {previous && (
+                <a href={`/blog/${previous.slug}`} class="nav-card nav-previous">
+                  {previous.frontmatter.image && (
+                    <div class="nav-image">
+                      <img 
+                        src={previous.frontmatter.image} 
+                        alt={previous.frontmatter.title}
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  <div class="nav-content">
+                    <div class="nav-label">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M11 4L7 8L11 12" stroke="currentColor" stroke-width="2" fill="none"/>
+                      </svg>
+                      Предыдущая статья
+                    </div>
+                    <h4 class="nav-title">{previous.frontmatter.title}</h4>
+                    {previous.frontmatter.description && (
+                      <p class="nav-excerpt">
+                        {previous.frontmatter.description.substring(0, 100)}
+                        {previous.frontmatter.description.length > 100 ? '...' : ''}
+                      </p>
+                    )}
+                  </div>
+                </a>
+              )}
+              
+              {next && (
+                <a href={`/blog/${next.slug}`} class="nav-card nav-next">
+                  {next.frontmatter.image && (
+                    <div class="nav-image">
+                      <img 
+                        src={next.frontmatter.image} 
+                        alt={next.frontmatter.title}
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  <div class="nav-content">
+                    <div class="nav-label">
+                      Следующая статья
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M5 12L9 8L5 4" stroke="currentColor" stroke-width="2" fill="none"/>
+                      </svg>
+                    </div>
+                    <h4 class="nav-title">{next.frontmatter.title}</h4>
+                    {next.frontmatter.description && (
+                      <p class="nav-excerpt">
+                        {next.frontmatter.description.substring(0, 100)}
+                        {next.frontmatter.description.length > 100 ? '...' : ''}
+                      </p>
+                    )}
+                  </div>
+                </a>
+              )}
+            </div>
+          </nav>
         )}
       </article>
       
@@ -95,22 +207,28 @@ const categorySlug = article.frontmatter.category
         <div class="sidebar-section">
           <h3>Последние новости</h3>
           <div class="latest-sidebar">
-            {latestArticles.map(latestArticle => {
+            {latestArticles.map((latestArticle: any) => {
               const latestCategorySlug = latestArticle.frontmatter.category 
                 ? latestArticle.frontmatter.category.toLowerCase().replace(/\s+/g, '-')
                 : 'uncategorized';
                 
               return (
                 <a href={`/blog/${latestArticle.slug}`} class="sidebar-article">
-                  <h4>{latestArticle.frontmatter.title}</h4>
-                  <div class="sidebar-meta">
-                    <span>{latestArticle.frontmatter.category}</span>
-                    <span>
-                      {new Date(latestArticle.frontmatter.date).toLocaleDateString('ru-RU', {
-                        day: 'numeric',
-                        month: 'short'
-                      })}
-                    </span>
+                  {latestArticle.frontmatter.image && (
+                    <div class="sidebar-article-image">
+                      <img 
+                        src={latestArticle.frontmatter.image} 
+                        alt={latestArticle.frontmatter.title}
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  <div class="sidebar-article-content">
+                    <h4>{latestArticle.frontmatter.title}</h4>
+                    <div class="sidebar-meta">
+                      <span>{latestArticle.frontmatter.category}</span>
+                      <span>{formatShortDate(latestArticle.frontmatter.date)}</span>
+                    </div>
                   </div>
                 </a>
               );
@@ -169,12 +287,18 @@ const categorySlug = article.frontmatter.category
   border-radius: 20px;
   text-decoration: none;
   font-size: 0.85rem;
+  transition: opacity 0.3s;
+}
+
+.category-link:hover {
+  opacity: 0.9;
 }
 
 .article-title {
   font-size: 2.5rem;
   margin: 0 0 1.5rem 0;
   line-height: 1.2;
+  color: #222;
 }
 
 .article-author {
@@ -200,6 +324,11 @@ const categorySlug = article.frontmatter.category
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.article-image:hover img {
+  transform: scale(1.03);
 }
 
 .article-content {
@@ -208,41 +337,48 @@ const categorySlug = article.frontmatter.category
   color: #333;
 }
 
-.article-content h2 {
+.article-content :global(h2) {
   margin: 2.5rem 0 1rem 0;
   color: #222;
+  font-size: 1.8rem;
 }
 
-.article-content h3 {
+.article-content :global(h3) {
   margin: 2rem 0 1rem 0;
   color: #333;
+  font-size: 1.5rem;
 }
 
-.article-content p {
+.article-content :global(p) {
   margin-bottom: 1.5rem;
 }
 
-.article-content img {
+.article-content :global(img) {
   max-width: 100%;
   height: auto;
   margin: 1.5rem 0;
   border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-.article-content blockquote {
+.article-content :global(blockquote) {
   border-left: 4px solid #667eea;
   padding-left: 1.5rem;
   margin: 2rem 0;
   font-style: italic;
   color: #555;
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 0 8px 8px 0;
 }
 
-.article-content ul, .article-content ol {
+.article-content :global(ul), 
+.article-content :global(ol) {
   margin: 1.5rem 0;
   padding-left: 2rem;
 }
 
-.article-content li {
+.article-content :global(li) {
   margin-bottom: 0.5rem;
 }
 
@@ -256,7 +392,7 @@ const categorySlug = article.frontmatter.category
   margin-bottom: 1.5rem;
 }
 
-.article-tags span {
+.article-tags span:first-child {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
@@ -275,6 +411,119 @@ const categorySlug = article.frontmatter.category
   padding: 0.4rem 1rem;
   border-radius: 20px;
   font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.tag:hover {
+  background: #667eea;
+  color: white;
+}
+
+/* Навигация между статьями */
+.article-navigation {
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 2px solid #eee;
+}
+
+.navigation-title {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #333;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.navigation-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.nav-card {
+  display: flex;
+  flex-direction: column;
+  background: #f8f9fa;
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  height: 100%;
+  overflow: hidden;
+}
+
+.nav-card:hover {
+  background: white;
+  border-color: #667eea;
+  transform: translateY(-3px);
+  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.15);
+}
+
+.nav-image {
+  width: 100%;
+  height: 160px;
+  overflow: hidden;
+}
+
+.nav-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.nav-card:hover .nav-image img {
+  transform: scale(1.05);
+}
+
+.nav-content {
+  padding: 1.25rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  color: #667eea;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.nav-previous .nav-label {
+  justify-content: flex-start;
+}
+
+.nav-next .nav-label {
+  justify-content: flex-end;
+}
+
+.nav-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.1rem;
+  line-height: 1.4;
+  color: #333;
+  font-weight: 600;
+  flex: 1;
+}
+
+.nav-card:hover .nav-title {
+  color: #667eea;
+}
+
+.nav-excerpt {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* Sidebar */
@@ -296,6 +545,7 @@ const categorySlug = article.frontmatter.category
   margin: 0 0 1rem 0;
   color: #333;
   font-size: 1.2rem;
+  font-weight: 600;
 }
 
 .latest-sidebar {
@@ -305,21 +555,58 @@ const categorySlug = article.frontmatter.category
 }
 
 .sidebar-article {
-  padding: 1rem 0;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
   border-bottom: 1px solid #eee;
   text-decoration: none;
   color: inherit;
+  transition: all 0.3s;
 }
 
 .sidebar-article:last-child {
   border-bottom: none;
 }
 
+.sidebar-article:hover {
+  padding-left: 0.5rem;
+  border-color: #667eea;
+}
+
+.sidebar-article-image {
+  flex-shrink: 0;
+  width: 70px;
+  height: 60px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.sidebar-article-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-article:hover .sidebar-article-image img {
+  transform: scale(1.05);
+}
+
+.sidebar-article-content {
+  flex: 1;
+  min-width: 0;
+}
+
 .sidebar-article h4 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1rem;
-  line-height: 1.4;
+  margin: 0 0 0.25rem 0;
+  font-size: 0.95rem;
+  line-height: 1.3;
   color: #333;
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .sidebar-article:hover h4 {
@@ -329,8 +616,14 @@ const categorySlug = article.frontmatter.category
 .sidebar-meta {
   display: flex;
   justify-content: space-between;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #666;
+}
+
+.sidebar-meta span:first-child {
+  background: #f0f0f0;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
 }
 
 .sidebar-categories {
@@ -346,11 +639,14 @@ const categorySlug = article.frontmatter.category
   text-decoration: none;
   color: #555;
   transition: all 0.3s;
+  text-align: center;
+  font-size: 0.9rem;
 }
 
 .sidebar-category:hover {
   background: #667eea;
   color: white;
+  transform: translateX(5px);
 }
 
 /* Адаптивность */
@@ -381,5 +677,81 @@ const categorySlug = article.frontmatter.category
   .article-image {
     height: 250px;
   }
+  
+  .navigation-cards {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .nav-card {
+    flex-direction: row;
+    min-height: 140px;
+  }
+  
+  .nav-image {
+    width: 120px;
+    height: auto;
+    flex-shrink: 0;
+  }
+  
+  .nav-content {
+    padding: 1rem;
+  }
+  
+  .sidebar-section {
+    padding: 1rem;
+  }
+  
+  .sidebar-article-image {
+    width: 60px;
+    height: 50px;
+  }
+}
+
+@media (max-width: 480px) {
+  .article-title {
+    font-size: 1.7rem;
+  }
+  
+  .article-content {
+    font-size: 1rem;
+  }
+  
+  .nav-card {
+    flex-direction: column;
+    min-height: auto;
+  }
+  
+  .nav-image {
+    width: 100%;
+    height: 140px;
+  }
+  
+  .navigation-cards:has(.nav-card:only-child) .nav-card {
+    max-width: 100%;
+  }
+}
+
+/* Стиль для одной карточки в навигации */
+#navigation-cards .nav-card:only-child {
+  grid-column: 1 / -1;
+  max-width: 500px;
+  margin: 0 auto;
 }
 </style>
+
+<script is:inline>
+// Скрипт для центрирования навигации если только одна ссылка
+document.addEventListener('DOMContentLoaded', () => {
+  const navigation = document.querySelector('#navigation-cards');
+  if (navigation) {
+    const cards = navigation.querySelectorAll('.nav-card');
+    if (cards.length === 1) {
+      const card = cards[0];
+      card.style.gridColumn = '1 / -1';
+      card.style.maxWidth = '500px';
+      card.style.margin = '0 auto';
+    }
+  }
+});
+</script>

@@ -26,6 +26,11 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      - name: 📁 Create website directory on server
+        run: |
+          ssh -o StrictHostKeyChecking=no u3339934@31.31.197.15 \
+            "mkdir -p /www/rus-news.online && echo '✅ Папка создана'"
+
       - name: 🚀 Deploy via Rsync
         run: |
           rsync -avz --delete \

@@ -1,4 +1,4 @@
-name: Deploy Astro to REG.RU
+name: Deploy Astro to REG.RU via SSH
 
 on:
   push:
@@ -24,26 +24,40 @@ jobs:
     - name: 🔨 Build project
       run: npm run build
     
-    - name: ✅ Verify build
+    - name: 📁 Check build files
       run: |
+        echo "Files in dist/:"
+        ls -la dist/
+        echo "Checking for index.html..."
         if [ ! -f "dist/index.html" ]; then
-          echo "❌ ERROR: index.html not found in dist/"
-          ls -la dist/
+          echo "❌ ERROR: No index.html in dist/"
           exit 1
         fi
-        echo "✅ Build verified"
+        echo "✅ Build looks good"
     
-    - name: 🚀 Deploy to REG.RU
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./dist/
-        server-dir: /www/rus-news.online/
-        # Добавьте эти параметры если FTP не работает:
-        # port: 990
-        # protocol: ftps
+    - name: 🚀 Deploy via SSH (rsync)
+      env:
+        SSH_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+      run: |
+        # Установка sshpass для работы с паролем
+        sudo apt-get update && sudo apt-get install -y sshpass
+        
+        # Синхронизация через rsync (самый надежный способ)
+        echo "Starting rsync deployment..."
+        sshpass -p "$SSH_PASSWORD" rsync -avz \
+          --delete \
+          --progress \
+          -e "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30" \
+          ./dist/ \
+          u3339934@31.31.197.15:/www/rus-news.online/
+        
+        echo "✅ Files uploaded successfully"
     
-    - name: 🎉 Success
-      run: echo "Site deployed to rus-news.online"
+    - name: 🎉 Verify deployment
+      env:
+        SSH_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+      run: |
+        echo "Checking files on server..."
+        sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no \
+          u3339934@31.31.197.15 \
+          "ls -la /www/rus-news.online/ && echo 'Deployment verified!'"

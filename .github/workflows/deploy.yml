@@ -20,16 +20,14 @@ jobs:
         run: |
           npm ci
           npm run build
-
-      - name: 🔐 Setup SSH Key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Копируем .htaccess в client
+          cp .htaccess dist/client/
 
       - name: 🚀 Deploy via Rsync
         run: |
+          # Загружаем ТОЛЬКО содержимое dist/client/ в корень сайта
           rsync -avz --delete \
             -e "ssh -o StrictHostKeyChecking=no" \
-            ./dist/ \
+            ./dist/client/ \
             u3339934@31.31.197.15:/var/www/u3339934/data/www/rus-news.online/
           echo "✅ Сайт успешно задеплоен!"

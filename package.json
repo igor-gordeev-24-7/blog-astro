@@ -4,7 +4,8 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && cp .htaccess dist/",
+    "build:full": "astro build && cp .htaccess dist/ && cp .htaccess dist/client/",
     "preview": "node ./dist/server/entry.mjs",
     "astro": "astro"
   },

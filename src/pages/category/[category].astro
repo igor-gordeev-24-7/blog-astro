@@ -122,40 +122,39 @@ console.log(`Category: ${categoryName}, Articles: ${articles.length}, Is predefi
     )}
 
     <aside class="all-categories">
-      <h2>Все категории</h2>
-      <div class="categories-list">
-        {[...new Set([...allCategories, ...predefinedCategories])].map(cat => {
-          const catSlug = categoryToSlug(cat);
-          const isActive = catSlug === category;
-          const hasArticles = allCategories.includes(cat);
-          
-          return (
-            <a 
-              href={`/category/${catSlug}`} 
-              class={`category-item ${isActive ? 'active' : ''} ${!hasArticles ? 'empty-category' : ''}`}
-              title={!hasArticles ? 'Пока нет статей' : ''}
-            >
-              <span class="category-icon">
-                {cat === 'Политика' && '📰'}
-                {cat === 'В мире' && '🌍'}
-                {cat === 'Экономика' && '💰'}
-                {cat === 'Общество' && '👥'}
-                {cat === 'Происшествия' && '🚨'}
-                {cat === 'Культура' && '🎨'}
-                {cat === 'Туризм' && '✈️'}
-                {cat === 'Наука' && '🔬'}
-                {cat === 'Армия' && '⚔️'}
-                {cat === 'Спорт' && '⚽'}
-                {!['Политика', 'В мире', 'Экономика', 'Общество', 'Происшествия', 
-                   'Культура', 'Туризм', 'Наука', 'Армия', 'Спорт'].includes(cat) && '📄'}
-              </span>
-              <span class="category-text">{cat}</span>
-              {!hasArticles && <span class="empty-badge">пусто</span>}
-            </a>
-          );
-        })}
-      </div>
-    </aside>
+  		<h2>Все категории</h2>
+			<div class="categories-list">
+				{[...new Set([...allCategories, ...predefinedCategories])].map(cat => {
+						const catSlug = categoryToSlug(cat);
+						const isActive = catSlug === category;
+						const hasArticles = allCategories.includes(cat);
+						
+						return (
+							<a 
+								href={`/category/${catSlug}`} 
+								class={`category-item ${isActive ? 'active' : ''} ${!hasArticles ? 'empty-category' : ''}`}
+								title={!hasArticles ? 'Пока нет статей' : ''}
+							>
+								<span class="category-icon">
+									{cat === 'Политика' && '📰'}
+									{cat === 'В мире' && '🌍'}
+									{cat === 'Экономика' && '💰'}
+									{cat === 'Общество' && '👥'}
+									{cat === 'Происшествия' && '🚨'}
+									{cat === 'Культура' && '🎨'}
+									{cat === 'Туризм' && '✈️'}
+									{cat === 'Наука' && '🔬'}
+									{cat === 'Спорт' && '⚽'}
+									{!['Политика', 'В мире', 'Экономика', 'Общество', 'Происшествия', 
+										'Культура', 'Туризм', 'Наука', 'Спорт'].includes(cat) && '📄'}
+								</span>
+								<span class="category-text">{cat}</span>
+								{!hasArticles && <span class="empty-badge">пусто</span>}
+							</a>
+						);
+					})}
+			</div>
+		</aside>
   </div>
 </Layout>
 

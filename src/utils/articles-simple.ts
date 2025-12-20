@@ -64,21 +64,56 @@ function normalizeCategory(category: string): string {
 export function categoryToSlug(category: string): string {
   if (!category) return '';
   
+  // Сопоставление русских названий с английскими слэгами
+  const reverseCategoryMap: Record<string, string> = {
+    'Политика': 'politics',
+    'В мире': 'world',
+    'Экономика': 'economics',
+    'Общество': 'society',
+    'Происшествия': 'incidents',
+    'Культура': 'culture',
+    'Туризм': 'tourism',
+    'Наука': 'science',
+    'Спорт': 'sports',
+  };
+  
+  // Если категория есть в маппинге, возвращаем английский слэг
+  if (reverseCategoryMap[category]) {
+    return reverseCategoryMap[category];
+  }
+  
+  // Иначе используем старую логику для обратной совместимости
   return category
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, '-')  // Заменяем пробелы на дефисы
-    .replace(/[^a-zа-яё0-9-]/g, ''); // Удаляем спецсимволы
+    .replace(/\s+/g, '-')
+    .replace(/[^a-zа-яё0-9-]/g, '');
 }
 
 // Функция для преобразования slug обратно в читаемую категорию
 export function slugToCategory(slug: string): string {
   if (!slug) return '';
   
-  // Сначала заменяем дефисы на пробелы
-  let category = slug.replace(/-/g, ' ');
+  // Сопоставление английских слэгов с русскими названиями
+  const categoryMap: Record<string, string> = {
+    'politics': 'Политика',
+    'world': 'В мире',
+    'economics': 'Экономика',
+    'society': 'Общество',
+    'incidents': 'Происшествия',
+    'culture': 'Культура',
+    'tourism': 'Туризм',
+    'science': 'Наука',
+    'sports': 'Спорт',
+  };
   
-  // Делаем первую букву каждого слова заглавной
+  // Если слэг есть в маппинге, возвращаем русское название
+  if (categoryMap[slug]) {
+    return categoryMap[slug];
+  }
+  
+  // Иначе используем старую логику для обратной совместимости
+  let category = slug.replace(/-/g, ' ');
   category = category.replace(/\b\w/g, char => char.toUpperCase());
   
   return category;
@@ -129,7 +164,7 @@ export async function getArticleBySlugSimple(slug: string): Promise<Article | nu
 export function getPredefinedCategories(): string[] {
   return [
     'Политика', 'В мире', 'Экономика', 'Общество', 'Происшествия',
-    'Культура', 'Туризм', 'Наука', 'Армия', 'Спорт'
+    'Культура', 'Туризм', 'Наука', 'Спорт',
   ];
 }
 

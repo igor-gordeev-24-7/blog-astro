@@ -1,14 +1,93 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import ArticleCard from '../components/ArticleCard.astro';
-import { getLatestArticlesSimple } from '../utils/articles-simple';
+import { getLatestArticlesSimple, getArticles } from '../utils/articles-simple';
 
-const latestArticles = await getLatestArticlesSimple(6);
+// Возможные значения для количества статей на странице
+const PER_PAGE_OPTIONS = [6, 12, 15, 24, 30, 48];
+const DEFAULT_PER_PAGE = 12;
+
+// Функция для генерации элементов пагинации
+function generatePageLinks(currentPage: number, totalPages: number, getPageUrl: (page: number) => string) {
+  const links: Array<{type: 'page', num: number} | {type: 'dots'}> = [];
+  
+  if (totalPages <= 1) return links;
+  
+  let startPage = Math.max(1, currentPage - 2);
+  let endPage = Math.min(totalPages, currentPage + 2);
+  
+  // Добавляем первую страницу если нужно
+  if (startPage > 1) {
+    links.push({type: 'page', num: 1});
+    if (startPage > 2) {
+      links.push({type: 'dots'});
+    }
+  }
+  
+  // Добавляем основные страницы
+  for (let i = startPage; i <= endPage; i++) {
+    links.push({type: 'page', num: i});
+  }
+  
+  // Добавляем последнюю страницу если нужно
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) {
+      links.push({type: 'dots'});
+    }
+    links.push({type: 'page', num: totalPages});
+  }
+  
+  return links;
+}
+
+// Получаем текущий URL и параметры запроса
+const url = new URL(Astro.request.url);
+const pageParam = url.searchParams.get('page');
+const perPageParam = url.searchParams.get('perPage');
+
+// Получаем текущую страницу и количество статей на странице
+const currentPage = pageParam ? Math.max(1, parseInt(pageParam)) : 1;
+const perPage = perPageParam && PER_PAGE_OPTIONS.includes(parseInt(perPageParam)) 
+  ? parseInt(perPageParam) 
+  : DEFAULT_PER_PAGE;
+
+// Получаем все статьи
+const allArticles = await getArticles();
+const totalArticles = allArticles.length;
+
+// Вычисляем пагинацию
+const totalPages = Math.ceil(totalArticles / perPage);
+const safeCurrentPage = Math.min(currentPage, Math.max(1, totalPages));
+const startIndex = (safeCurrentPage - 1) * perPage;
+const endIndex = startIndex + perPage;
+
+// Получаем статьи для текущей страницы
+const displayedArticles = allArticles.slice(startIndex, endIndex);
+
+// Функция для создания URL с параметрами пагинации
+function getPageUrl(pageNum: number, itemsPerPage?: number) {
+  const params = new URLSearchParams();
+  
+  if (pageNum > 1) {
+    params.set('page', pageNum.toString());
+  }
+  
+  const usePerPage = itemsPerPage || perPage;
+  if (usePerPage !== DEFAULT_PER_PAGE) {
+    params.set('perPage', usePerPage.toString());
+  }
+  
+  const queryString = params.toString();
+  return `/${queryString ? '?' + queryString : ''}`;
+}
+
+// Генерируем ссылки для пагинации
+const pageLinks = generatePageLinks(safeCurrentPage, totalPages, getPageUrl);
 ---
 
 <Layout 
-  title="Главная | Мой блог" 
-  description="Последние новости и статьи на различные темы"
+  title={`Главная - Страница ${safeCurrentPage} из ${totalPages} | Мой блог`}
+  description={`Последние новости и статьи на различные темы. Страница ${safeCurrentPage} из ${totalPages}. Самые свежие статьи и события дня.`}
 >
   <section class="hero">
     <div class="container">
@@ -18,15 +97,103 @@ const latestArticles = await getLatestArticlesSimple(6);
   </section>
 
   <div class="container">
-    <section class="latest-articles">
-      <h2>Последние публикации ({latestArticles.length})</h2>
-      
-      {latestArticles.length > 0 ? (
-        <div class="articles-list">
-          {latestArticles.map((article) => (
-            <ArticleCard article={article} />
-          ))}
+    <!-- Панель управления -->
+    <div class="controls-panel">
+      <form method="GET" action="/" class="per-page-form">
+        <div class="form-group">
+          <label for="perPageSelect" class="form-label">Статей на странице:</label>
+          <select 
+            id="perPageSelect" 
+            name="perPage" 
+            class="per-page-select"
+            onchange="this.form.submit()"
+          >
+            {PER_PAGE_OPTIONS.map(option => (
+              <option value={option} selected={option === perPage}>
+                {option}
+              </option>
+            ))}
+          </select>
         </div>
+        
+        <input type="hidden" name="page" value="1" />
+        <button type="submit" style="display: none">Применить</button>
+      </form>
+      
+      <div class="page-stats">
+        <div class="total-articles">
+          Всего статей: <strong>{totalArticles}</strong>
+        </div>
+        <span class="articles-range">
+          Показано <strong>{startIndex + 1}-{Math.min(endIndex, totalArticles)}</strong> из <strong>{totalArticles}</strong>
+          {totalPages > 1 && (
+            <span class="page-info"> • Страница <strong>{safeCurrentPage}</strong> из <strong>{totalPages}</strong></span>
+          )}
+        </span>
+      </div>
+    </div>
+
+    <section class="latest-articles">
+      <h2>Последние публикации</h2>
+      
+      {displayedArticles.length > 0 ? (
+        <>
+          <div class="articles-list">
+            {displayedArticles.map((article) => (
+              <ArticleCard article={article} />
+            ))}
+          </div>
+
+          <!-- Пагинация -->
+          {totalPages > 1 && (
+            <div class="pagination">
+              <!-- Первая страница -->
+              {safeCurrentPage > 1 && (
+                <a href={getPageUrl(1)} class="pagination-btn first-page" title="Первая страница">
+                  ««
+                </a>
+              )}
+              
+              <!-- Предыдущая страница -->
+              {safeCurrentPage > 1 && (
+                <a href={getPageUrl(safeCurrentPage - 1)} class="pagination-btn prev-page" title="Предыдущая страница">
+                  «
+                </a>
+              )}
+              
+              <!-- Номера страниц -->
+              {pageLinks.map((link) => {
+                if (link.type === 'dots') {
+                  return <span class="pagination-dots">...</span>;
+                }
+                
+                const isActive = link.num === safeCurrentPage;
+                return (
+                  <a 
+                    href={getPageUrl(link.num)} 
+                    class={`pagination-btn ${isActive ? 'active' : ''}`}
+                  >
+                    {link.num}
+                  </a>
+                );
+              })}
+              
+              <!-- Следующая страница -->
+              {safeCurrentPage < totalPages && (
+                <a href={getPageUrl(safeCurrentPage + 1)} class="pagination-btn next-page" title="Следующая страница">
+                  »
+                </a>
+              )}
+              
+              <!-- Последняя страница -->
+              {safeCurrentPage < totalPages && (
+                <a href={getPageUrl(totalPages)} class="pagination-btn last-page" title="Последняя страница">
+                  »»
+                </a>
+              )}
+            </div>
+          )}
+        </>
       ) : (
         <div class="no-articles">
           <h3>Статьи не найдены</h3>
@@ -45,7 +212,7 @@ const latestArticles = await getLatestArticlesSimple(6);
 <style>
 .hero {
   text-align: center;
-  padding: 2rem 1rem;
+  padding: 3rem 1rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   margin-bottom: 3rem;
@@ -59,13 +226,99 @@ const latestArticles = await getLatestArticlesSimple(6);
 .hero p {
   font-size: 1.2rem;
   opacity: 0.9;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
-/* .container {
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 0 1rem;
-} */
+/* Панель управления */
+.controls-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin: 2rem 0;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  border: 1px solid #e9ecef;
+}
+
+.per-page-form {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.form-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.form-label {
+  font-weight: 600;
+  color: #555;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.per-page-select {
+  padding: 0.6rem 1.2rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  color: #333;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  min-width: 80px;
+}
+
+.per-page-select:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.per-page-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.page-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: #666;
+  background: white;
+  padding: 0.8rem 1.2rem;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.total-articles {
+  font-weight: 500;
+}
+
+.total-articles strong {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.articles-range strong {
+  color: #333;
+  font-weight: 600;
+}
+
+.page-info {
+  margin-left: 0.5rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid #ddd;
+}
 
 .latest-articles {
   margin: 3rem 0;
@@ -78,9 +331,70 @@ const latestArticles = await getLatestArticlesSimple(6);
 }
 
 .articles-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(600px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+/* Пагинация */
+.pagination {
   display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 0.75rem;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  color: #555;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.pagination-btn:hover {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+  transform: translateY(-2px);
+}
+
+.pagination-btn.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.pagination-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  color: #999;
+  font-size: 1.2rem;
+}
+
+.first-page, .last-page {
+  font-weight: bold;
+}
+
+.prev-page, .next-page {
+  min-width: 50px;
 }
 
 .no-articles {
@@ -89,11 +403,19 @@ const latestArticles = await getLatestArticlesSimple(6);
   background: #f8f9fa;
   border-radius: 12px;
   border: 2px dashed #ddd;
+  margin: 2rem 0;
 }
 
 .no-articles h3 {
   color: #666;
   margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.no-articles p {
+  color: #555;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
 }
 
 .no-articles ul {
@@ -115,4 +437,120 @@ code {
   border-radius: 4px;
   font-family: monospace;
 }
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .hero {
+    padding: 2rem 1rem;
+  }
+  
+  .hero h1 {
+    font-size: 2rem;
+  }
+  
+  .hero p {
+    font-size: 1.1rem;
+  }
+  
+  .latest-articles h2 {
+    font-size: 1.8rem;
+  }
+  
+  .controls-panel {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    padding: 1.2rem;
+  }
+  
+  .per-page-form {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .form-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .page-stats {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .articles-list {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .pagination {
+    gap: 0.25rem;
+  }
+  
+  .pagination-btn {
+    min-width: 35px;
+    height: 35px;
+    padding: 0 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .pagination-dots {
+    min-width: 35px;
+    height: 35px;
+  }
+  
+  .no-articles {
+    padding: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero h1 {
+    font-size: 1.8rem;
+  }
+  
+  .hero p {
+    font-size: 1rem;
+  }
+  
+  .latest-articles h2 {
+    font-size: 1.6rem;
+  }
+  
+  .per-page-select {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .form-label {
+    font-size: 0.9rem;
+  }
+  
+  .no-articles h3 {
+    font-size: 1.3rem;
+  }
+}
 </style>
+
+<script>
+// Общий скрипт для сохранения выбора количества статей
+document.addEventListener('DOMContentLoaded', () => {
+  const perPageSelect = document.getElementById('perPageSelect');
+  
+  if (perPageSelect && perPageSelect instanceof HTMLSelectElement) {
+    // Восстанавливаем выбранное значение из localStorage
+    const savedPerPage = localStorage.getItem('articlesPerPage');
+    if (savedPerPage) {
+      const option = perPageSelect.querySelector(`option[value="${savedPerPage}"]`);
+      if (option && option instanceof HTMLOptionElement) {
+        perPageSelect.value = savedPerPage;
+      }
+    }
+    
+    // Сохраняем выбор в localStorage при изменении
+    perPageSelect.addEventListener('change', function() {
+      localStorage.setItem('articlesPerPage', this.value);
+    });
+  }
+});
+</script>

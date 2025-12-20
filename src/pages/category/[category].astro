@@ -10,6 +10,44 @@ import {
   isPredefinedCategory 
 } from '../../utils/articles-simple';
 
+// Возможные значения для количества статей на странице
+const PER_PAGE_OPTIONS = [6, 12, 15, 24, 30, 48];
+const DEFAULT_PER_PAGE = 15;
+
+// Функция для генерации элементов пагинации
+function generatePageLinks(currentPage: number, totalPages: number, getPageUrl: (page: number) => string) {
+  const links: Array<{type: 'page', num: number} | {type: 'dots'}> = [];
+  
+  if (totalPages <= 1) return links;
+  
+  let startPage = Math.max(1, currentPage - 2);
+  let endPage = Math.min(totalPages, currentPage + 2);
+  
+  // Добавляем первую страницу если нужно
+  if (startPage > 1) {
+    links.push({type: 'page', num: 1});
+    if (startPage > 2) {
+      links.push({type: 'dots'});
+    }
+  }
+  
+  // Добавляем основные страницы
+  for (let i = startPage; i <= endPage; i++) {
+    links.push({type: 'page', num: i});
+  }
+  
+  // Добавляем последнюю страницу если нужно
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) {
+      links.push({type: 'dots'});
+    }
+    links.push({type: 'page', num: totalPages});
+  }
+  
+  return links;
+}
+
+// Для SSR используем getStaticPaths только для первой страницы
 export async function getStaticPaths() {
   const articles = await getArticles();
   const predefinedCategories = getPredefinedCategories();
@@ -29,9 +67,29 @@ export async function getStaticPaths() {
 
 const { category = '' } = Astro.params;
 
+// Получаем текущий URL и параметры запроса
+const url = new URL(Astro.request.url);
+const pageParam = url.searchParams.get('page');
+const perPageParam = url.searchParams.get('perPage');
+
+// Получаем текущую страницу и количество статей на странице
+const currentPage = pageParam ? Math.max(1, parseInt(pageParam)) : 1;
+const perPage = perPageParam && PER_PAGE_OPTIONS.includes(parseInt(perPageParam)) 
+  ? parseInt(perPageParam) 
+  : DEFAULT_PER_PAGE;
+
 // Преобразуем slug обратно в читаемое название
 const categoryName = slugToCategory(category);
-const articles = await getArticlesByCategorySimple(category);
+const allArticlesInCategory = await getArticlesByCategorySimple(category);
+const totalArticles = allArticlesInCategory.length;
+
+// Вычисляем пагинацию
+const totalPages = Math.ceil(totalArticles / perPage);
+const safeCurrentPage = Math.min(currentPage, Math.max(1, totalPages));
+const startIndex = (safeCurrentPage - 1) * perPage;
+const endIndex = startIndex + perPage;
+const displayedArticles = allArticlesInCategory.slice(startIndex, endIndex);
+
 const allArticles = await getArticles();
 const allCategories = [...new Set(allArticles.map(a => a.frontmatter.category).filter(Boolean))];
 const predefinedCategories = getPredefinedCategories();
@@ -40,17 +98,37 @@ const predefinedCategories = getPredefinedCategories();
 const isPredefined = isPredefinedCategory(category);
 
 // Если категория пустая ИЛИ это не предопределенная категория И нет статей, тогда 404
-if (!category || (!isPredefined && articles.length === 0)) {
-  console.log(`Redirecting to 404: category="${category}", isPredefined=${isPredefined}, articles=${articles.length}`);
+if (!category || (!isPredefined && totalArticles === 0)) {
+  console.log(`Redirecting to 404: category="${category}", isPredefined=${isPredefined}, articles=${totalArticles}`);
   return Astro.redirect('/404');
 }
 
-console.log(`Category: ${categoryName}, Articles: ${articles.length}, Is predefined: ${isPredefined}`);
+console.log(`Category: ${categoryName}, Total Articles: ${totalArticles}, Page: ${safeCurrentPage}/${totalPages}, Per Page: ${perPage}`);
+
+// Функция для создания URL с параметрами пагинации
+function getPageUrl(pageNum: number, itemsPerPage?: number) {
+  const params = new URLSearchParams();
+  
+  if (pageNum > 1) {
+    params.set('page', pageNum.toString());
+  }
+  
+  const usePerPage = itemsPerPage || perPage;
+  if (usePerPage !== DEFAULT_PER_PAGE) {
+    params.set('perPage', usePerPage.toString());
+  }
+  
+  const queryString = params.toString();
+  return `/category/${category}${queryString ? '?' + queryString : ''}`;
+}
+
+// Генерируем ссылки для пагинации
+const pageLinks = generatePageLinks(safeCurrentPage, totalPages, getPageUrl);
 ---
 
 <Layout 
-  title={`${categoryName} - Новости и статьи | Мой блог`}
-  description={`Последние новости и статьи на тему ${categoryName}. Все самое интересное и актуальное в одной категории.`}
+  title={`${categoryName} - Страница ${safeCurrentPage} из ${totalPages} | Мой блог`}
+  description={`Последние новости и статьи на тему ${categoryName}. Страница ${safeCurrentPage} из ${totalPages}. Все самое интересное и актуальное в одной категории.`}
 >
   <div class="container">
     <div class="category-header">
@@ -59,18 +137,104 @@ console.log(`Category: ${categoryName}, Articles: ${articles.length}, Is predefi
         Последние новости и статьи на тему {categoryName}. Все самое интересное и актуальное в одной категории.
       </p>
       <div class="category-count">
-        <span class="count-number">{articles.length}</span> {articles.length === 1 ? 'статья' : articles.length < 5 ? 'статьи' : 'статей'}
+        <span class="count-number">{totalArticles}</span> {totalArticles === 1 ? 'статья' : totalArticles < 5 ? 'статьи' : 'статей'}
+        {totalPages > 1 && (
+          <span class="page-count"> • Страница <strong>{safeCurrentPage}</strong> из <strong>{totalPages}</strong></span>
+        )}
       </div>
     </div>
 
-    {articles.length > 0 ? (
-      <div class="category-articles">
-        <div class="articles-grid">
-          {articles.map((article) => (
-            <ArticleCard article={article} />
-          ))}
+    {totalArticles > 0 ? (
+      <>
+        <!-- Панель управления -->
+        <div class="controls-panel">
+          <form method="GET" action={`/category/${category}`} class="per-page-form">
+            <div class="form-group">
+              <label for="perPageSelect" class="form-label">Статей на странице:</label>
+              <select 
+                id="perPageSelect" 
+                name="perPage" 
+                class="per-page-select"
+                onchange="this.form.submit()"
+              >
+                {PER_PAGE_OPTIONS.map(option => (
+                  <option value={option} selected={option === perPage}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <input type="hidden" name="page" value="1" />
+            <button type="submit" style="display: none">Применить</button>
+          </form>
+          
+          <div class="page-stats">
+            <span class="articles-range">
+              Показано <strong>{startIndex + 1}-{Math.min(endIndex, totalArticles)}</strong> из <strong>{totalArticles}</strong> статей
+            </span>
+          </div>
         </div>
-      </div>
+
+        <!-- Сетка статей -->
+        <div class="category-articles">
+          <div class="articles-grid">
+            {displayedArticles.map((article) => (
+              <ArticleCard article={article} />
+            ))}
+          </div>
+        </div>
+
+        <!-- Пагинация -->
+        {totalPages > 1 && (
+          <div class="pagination">
+            <!-- Первая страница -->
+            {safeCurrentPage > 1 && (
+              <a href={getPageUrl(1)} class="pagination-btn first-page" title="Первая страница">
+                ««
+              </a>
+            )}
+            
+            <!-- Предыдущая страница -->
+            {safeCurrentPage > 1 && (
+              <a href={getPageUrl(safeCurrentPage - 1)} class="pagination-btn prev-page" title="Предыдущая страница">
+                «
+              </a>
+            )}
+            
+            <!-- Номера страниц -->
+            {pageLinks.map((link) => {
+              if (link.type === 'dots') {
+                return <span class="pagination-dots">...</span>;
+              }
+              
+              const isActive = link.num === safeCurrentPage;
+              return (
+                <a 
+                  href={getPageUrl(link.num)} 
+                  class={`pagination-btn ${isActive ? 'active' : ''}`}
+                >
+                  {link.num}
+                </a>
+              );
+            })}
+            
+            <!-- Следующая страница -->
+            {safeCurrentPage < totalPages && (
+              <a href={getPageUrl(safeCurrentPage + 1)} class="pagination-btn next-page" title="Следующая страница">
+                »
+              </a>
+            )}
+            
+            <!-- Последняя страница -->
+            {safeCurrentPage < totalPages && (
+              <a href={getPageUrl(totalPages)} class="pagination-btn last-page" title="Последняя страница">
+                »»
+              </a>
+            )}
+          </div>
+        )}
+      </>
     ) : (
       <div class="no-articles">
         <div class="no-articles-content">
@@ -173,7 +337,7 @@ console.log(`Category: ${categoryName}, Articles: ${articles.length}, Is predefi
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-radius: 12px;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
 }
 
 .category-title {
@@ -196,6 +360,8 @@ console.log(`Category: ${categoryName}, Articles: ${articles.length}, Is predefi
   padding: 0.5rem 1.5rem;
   border-radius: 20px;
   font-size: 0.9rem;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .count-number {
@@ -203,11 +369,149 @@ console.log(`Category: ${categoryName}, Articles: ${articles.length}, Is predefi
   font-size: 1.2rem;
 }
 
+.page-count {
+  margin-left: 0.5rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Панель управления */
+.controls-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  border: 1px solid #e9ecef;
+}
+
+.per-page-form {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.form-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.form-label {
+  font-weight: 600;
+  color: #555;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.per-page-select {
+  padding: 0.6rem 1.2rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  color: #333;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  min-width: 80px;
+}
+
+.per-page-select:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.per-page-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.page-stats {
+  font-size: 0.95rem;
+  color: #666;
+  background: white;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.articles-range strong {
+  color: #333;
+  font-weight: 600;
+}
+
 .articles-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(600px, 1fr));
   gap: 2rem;
   margin: 2rem 0;
+}
+
+/* Пагинация */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 3rem 0;
+  padding: 1rem;
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 0.75rem;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  color: #555;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.pagination-btn:hover {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+  transform: translateY(-2px);
+}
+
+.pagination-btn.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.pagination-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  color: #999;
+  font-size: 1.2rem;
+}
+
+.first-page, .last-page {
+  font-weight: bold;
+}
+
+.prev-page, .next-page {
+  min-width: 50px;
 }
 
 .no-articles {
@@ -382,12 +686,12 @@ console.log(`Category: ${categoryName}, Articles: ${articles.length}, Is predefi
 
 .category-item.empty-category {
   opacity: 0.7;
-    color: #555;
+  color: #555;
   background: #f0f0f0;
 }
 
 .category-item.empty-category.active {
-    color: #555;
+  color: #555;
 }
 
 .category-icon {
@@ -474,5 +778,93 @@ console.log(`Category: ${categoryName}, Articles: ${articles.length}, Is predefi
     font-size: 0.7rem;
     margin-left: 0.25rem;
   }
+  
+  .controls-panel {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .per-page-form {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .form-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .page-stats {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .pagination {
+    gap: 0.25rem;
+  }
+  
+  .pagination-btn {
+    min-width: 35px;
+    height: 35px;
+    padding: 0 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .pagination-dots {
+    min-width: 35px;
+    height: 35px;
+  }
+}
+
+@media (max-width: 480px) {
+  .articles-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .category-header {
+    padding: 2rem 1rem;
+  }
+  
+  .category-title {
+    font-size: 1.8rem;
+  }
+  
+  .category-count {
+    font-size: 0.85rem;
+    padding: 0.4rem 1rem;
+  }
+  
+  .per-page-select {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .form-label {
+    font-size: 0.9rem;
+  }
 }
 </style>
+
+<script>
+// Добавляем обработку выбора количества статей с сохранением в localStorage
+document.addEventListener('DOMContentLoaded', () => {
+  const perPageSelect = document.getElementById('perPageSelect') as HTMLSelectElement;
+  
+  if (perPageSelect) {
+    // Восстанавливаем выбранное значение из localStorage
+    const savedPerPage = localStorage.getItem('articlesPerPage');
+    if (savedPerPage) {
+      const option = perPageSelect.querySelector(`option[value="${savedPerPage}"]`) as HTMLOptionElement;
+      if (option) {
+        perPageSelect.value = savedPerPage;
+      }
+    }
+    
+    // Сохраняем выбор в localStorage при изменении
+    perPageSelect.addEventListener('change', function() {
+      localStorage.setItem('articlesPerPage', this.value);
+    });
+  }
+});
+</script>

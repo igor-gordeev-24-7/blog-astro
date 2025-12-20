@@ -1,10 +1,5 @@
 RewriteEngine On
 RewriteBase /
 
-# 1. Если файл существует - отдаем его
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
-
-# 2. Все остальное - ищем в папке client/
-RewriteRule ^(.*)$ /client/$1 [L]
+# ВСЕ запросы ведем в папку /dist/client/
+RewriteRule ^(.*)$ /dist/client/$1 [L,QSA]
